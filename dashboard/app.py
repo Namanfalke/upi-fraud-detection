@@ -5,7 +5,15 @@ import pandas as pd
 import requests
 import streamlit as st
 
-API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")
+
+def get_api_url() -> str:
+    try:
+        return st.secrets["API_URL"]            # set in Streamlit Cloud
+    except Exception:
+        return os.environ.get("API_URL", "http://127.0.0.1:8000")  # local default
+
+
+API_URL = get_api_url().rstrip("/")
 IST = timezone(timedelta(hours=5, minutes=30))
 
 # Must match the options accepted by the API
@@ -27,7 +35,7 @@ st.set_page_config(page_title="UPI Fraud Monitor", page_icon="🛡️", layout="
 # ---------------------------------------------------------------
 @st.cache_data(ttl=30)
 def api_get(path: str, params: dict | None = None):
-    response = requests.get(f"{API_URL}{path}", params=params, timeout=20)
+    response = requests.get(f"{API_URL}{path}", params=params, timeout=90)
     response.raise_for_status()
     return response.json()
 
@@ -229,7 +237,7 @@ with tab_score:
             payload["historical_spend_pattern"] = spend_pattern
 
         try:
-            resp = requests.post(f"{API_URL}/predict", json=payload, timeout=30)
+            resp = requests.post(f"{API_URL}/predict", json=payload, timeout=90)
         except Exception as exc:
             st.error(f"Could not reach the API: {exc}")
         else:
